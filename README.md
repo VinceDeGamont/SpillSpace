@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SpillSpace
 
-## Getting Started
+Platform prototipe kesehatan mental dan *work-life balance* untuk karyawan Gen-Z berbasis **Psikologi Industri & Organisasi (Job Demands–Resources / JD-R Model)** — dikembangkan sebagai proyek UAS mata kuliah Psikologi Kerja.
 
-First, run the development server:
+## Fitur Utama
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+1. **Smart Clickwrap Informed Consent**
+   Persetujuan privasi yang transparan dan ramah pengguna sebelum masuk ke ruang kerja, menegaskan enkripsi data, akses terbatas hanya untuk psikolog mitra berlisensi, serta penggunaan data yang bebas dari penilaian kinerja (*performance review*).
+
+2. **10-Second Daily Vibe Check**
+   Simulasi check-in harian interaktif yang mencakup:
+   - Pemilih suasana hati & energi (*Mood & Energy Selector*).
+   - Slider beban tugas vs. waktu pribadi (*Task Load vs. Personal Time*, skala 1–10).
+   - *Context Tags* berbasis JD-R (*Job Demands* vs. *Job Resources*).
+   - Catatan refleksi singkat opsional.
+   - **Live Status Indicator** (Green, Yellow, Red) yang menghitung *Brain Capacity Used* secara real-time, lengkap dengan tombol **Book Priority Session** saat terdeteksi risiko burnout.
+
+3. **Monthly Stress Record & Work-Life Balance Dashboard**
+   Dasbor analitik bulanan dengan tata letak bento-grid yang menampilkan:
+   - Grafik tren stres mingguan (Week 1–Week 4) dengan *zone bands*.
+   - Rasio *Task Demands vs. Personal Recovery Time*.
+   - Kartu diagnosis status bulanan & rekomendasi psikologis otomatis (dapat dipratinjau pada state Green, Yellow, dan Red).
+
+4. **Partner Psychologist Connect & Pre-Counseling Summary**
+   Direktori psikolog mitra dengan simulasi **1-Click Anonymous Booking** dan pratinjau **Pre-Counseling Summary** (ringkasan grafik bulanan anonim yang otomatis dikirim ke psikolog saat sesi dipesan).
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router) & React 19
+- **Bahasa:** TypeScript
+- **Styling:** Tailwind CSS v4
+- **Animasi & Ikon:** Framer Motion, Lucide React
+
+## Cara Menjalankan Secara Lokal
+
+1. Pastikan Node.js (v20.9 atau lebih baru) sudah terpasang.
+2. Instal dependensi:
+   ```bash
+   npm install
+   ```
+3. Jalankan server pengembangan:
+   ```bash
+   npm run dev
+   ```
+4. Buka [http://localhost:3000](http://localhost:3000) di browser.
+
+## Struktur Direktori
+
+```text
+├── app/
+│   ├── globals.css          # Token desain & gaya dasar
+│   ├── layout.tsx           # Root layout, font, dan metadata
+│   └── page.tsx             # Halaman utama aplikasi
+├── components/
+│   └── SpillSpace/          # Komponen UI & logika interaktif SpillSpace
+│       ├── ConsentModal.tsx
+│       ├── Footer.tsx
+│       ├── Hero.tsx
+│       ├── MonthlyDashboard.tsx
+│       ├── Navbar.tsx
+│       ├── PsychologistConnect.tsx
+│       ├── Science.tsx
+│       ├── SpillSpaceApp.tsx
+│       ├── VibeCheck.tsx
+│       ├── data.ts
+│       └── ui.tsx
+└── public/                  # Aset statis
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

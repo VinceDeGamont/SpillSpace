@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# editor & local assistant configs
+.vscode/
+.idea/
+.cursor/
+.claude/
+.gemini/
+.windsurf/
+.agent/
+.agents/
+.aider*
+.copilot*
+CLAUDE.md
+GEMINI.md

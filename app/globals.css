@@ -1,26 +1,161 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Theme tokens & base styles */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@theme {
+  --color-cream: #faf8f5;
+  --color-cream-200: #f3efe8;
+  --color-cream-300: #ebe5db;
+  --color-ink: #1e293b;
+  --color-ink-soft: #475569;
+  --color-ink-mute: #64748b;
+
+  --color-sage-50: #f2f6f0;
+  --color-sage-100: #e3ede0;
+  --color-sage-200: #c9dcc3;
+  --color-sage-300: #abc8a3;
+  --color-sage-400: #8db584;
+  --color-sage-500: #6f9d66;
+  --color-sage-600: #57834f;
+  --color-sage-700: #44673e;
+
+  --color-honey-50: #fef7e8;
+  --color-honey-100: #fdecc9;
+  --color-honey-200: #fadb98;
+  --color-honey-300: #f6c766;
+  --color-honey-400: #f2b33d;
+  --color-honey-500: #e39a1b;
+  --color-honey-600: #bf7d0f;
+  --color-honey-700: #94600c;
+
+  --color-coral-50: #fdf0ed;
+  --color-coral-100: #fbded7;
+  --color-coral-200: #f7bfb2;
+  --color-coral-300: #f29d8a;
+  --color-coral-400: #ec7f68;
+  --color-coral-500: #e2614a;
+  --color-coral-600: #c64a34;
+  --color-coral-700: #9f3a29;
+
+  --shadow-soft: 0 1px 2px rgb(30 41 59 / 0.04), 0 8px 24px -12px rgb(30 41 59 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(30 41 59 / 0.04), 0 24px 48px -20px rgb(30 41 59 / 0.22);
+
+  --animate-pulse-ring: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  @keyframes pulse-ring {
+    0% {
+      box-shadow: 0 0 0 0 rgb(226 97 74 / 0.45);
+    }
+    70% {
+      box-shadow: 0 0 0 14px rgb(226 97 74 / 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgb(226 97 74 / 0);
+    }
   }
 }
 
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: var(--color-cream);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+}
+
+::selection {
+  background: var(--color-sage-200);
+  color: var(--color-ink);
+}
+
+/* Subtle paper grain so the cream never feels flat */
+.grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  background-image: radial-gradient(rgb(30 41 59 / 0.06) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(to bottom, black, transparent 85%);
+}
+
+/* Reusable glass surface */
+@utility glass {
+  background: rgb(255 255 255 / 0.62);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgb(255 255 255 / 0.7);
+}
+
+/* Bento card surface */
+@utility bento {
+  background: rgb(255 255 255 / 0.78);
+  border: 1px solid rgb(30 41 59 / 0.07);
+  border-radius: 1.75rem;
+  box-shadow: var(--shadow-soft);
+}
+
+/* Custom range slider */
+.vibe-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 0.75rem;
+  border-radius: 9999px;
+  outline: none;
+  cursor: pointer;
+}
+.vibe-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background: #fff;
+  border: 3px solid var(--color-ink);
+  box-shadow: 0 6px 16px -4px rgb(30 41 59 / 0.35);
+  transition: transform 150ms ease;
+}
+.vibe-range::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+.vibe-range:active::-webkit-slider-thumb {
+  transform: scale(1.18);
+}
+.vibe-range::-moz-range-thumb {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: #fff;
+  border: 3px solid var(--color-ink);
+  box-shadow: 0 6px 16px -4px rgb(30 41 59 / 0.35);
+}
+.vibe-range:focus-visible::-webkit-slider-thumb {
+  outline: 3px solid var(--color-sage-300);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
