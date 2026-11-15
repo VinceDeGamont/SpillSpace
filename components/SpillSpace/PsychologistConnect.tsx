@@ -16,9 +16,10 @@ import {
   Video,
   X,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { MONTHLY, PSYCHOLOGISTS, VIBE_COPY, levelFromScore, type Level, type Psychologist, type VibeResult } from "./data";
 import { LEVEL_STYLES, Reveal, SectionHeader, StatusDot, cn } from "./ui";
+import type { PersonalBookingEntry } from "./workspaceTypes";
 
 type BookingState = { status: "idle" } | { status: "loading" } | { status: "booked"; anonId: string };
 
@@ -27,23 +28,47 @@ export default function PsychologistConnect({
   previewLevel,
   todayCheckIn,
   onBooked,
+  anonCode = "Anon-#4821",
+  psychConsent = true,
+  savedBookings = [],
+  onBookPsychologist,
 }: {
   priorityRequested: boolean;
   previewLevel: Level;
   todayCheckIn: VibeResult | null;
   onBooked: (msg: string) => void;
+  anonCode?: string;
+  psychConsent?: boolean;
+  savedBookings?: PersonalBookingEntry[];
+  onBookPsychologist?: (payload: {
+    psychologistId: string;
+    psychologistName: string;
+    slotLabel: string;
+    isPriority: boolean;
+  }) => Promise<void>;
 }) {
   const [bookings, setBookings] = useState<Record<string, BookingState>>({});
-  const timers = useRef<Record<string, number>>({});
 
-  const book = (p: Psychologist) => {
+  const book = async (p: Psychologist) => {
+    if (!psychConsent) {
+      onBooked("Aktifkan Persetujuan Eksplisit Data Psikologis terlebih dahulu untuk menjadwalkan konseling.");
+      return;
+    }
     setBookings((b) => ({ ...b, [p.id]: { status: "loading" } }));
-    window.clearTimeout(timers.current[p.id]);
-    timers.current[p.id] = window.setTimeout(() => {
-      const anonId = `Anon-#${Math.floor(1000 + Math.random() * 9000)}`;
-      setBookings((b) => ({ ...b, [p.id]: { status: "booked", anonId } }));
-      onBooked(`Booked anonymously with ${p.name.split(" ")[0]} · ${p.slot}`);
-    }, 1100);
+    try {
+      if (onBookPsychologist) {
+        await onBookPsychologist({
+          psychologistId: p.id,
+          psychologistName: p.name,
+          slotLabel: p.slot,
+          isPriority: priorityRequested,
+        });
+      }
+      setBookings((b) => ({ ...b, [p.id]: { status: "booked", anonId: anonCode } }));
+      onBooked(`Sesi anonim (${anonCode}) dijadwalkan bersama ${p.name.split(" ")[0]} · ${p.slot}`);
+    } catch {
+      setBookings((b) => ({ ...b, [p.id]: { status: "idle" } }));
+    }
   };
 
   const cancel = (id: string) => setBookings((b) => ({ ...b, [id]: { status: "idle" } }));
@@ -52,11 +77,11 @@ export default function PsychologistConnect({
     <section id="psychologists" className="scroll-mt-28 px-4 py-20 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <SectionHeader
-          eyebrow="Partner Psychologist Connect"
+          eyebrow="Partner Psychologist Connect (Lapisan Data 2)"
           icon={<MessageCircleHeart className="size-3.5" />}
           title="Real humans. Licensed."
           accent="Definitely not HR."
-          description="External, certified psychologists contracted by your company — bound by professional confidentiality. Book in one click, stay anonymous, skip the awkward intro."
+          description="Psikolog eksternal berlisensi SIPP yang terikat Sumpah Profesi & Kode Etik Psikologi Indonesia (Pasal 6 Ayat 4). Jadwalkan sesi 1-klik dengan ID anonim Anda."
         />
 
         <AnimatePresence>
@@ -74,8 +99,8 @@ export default function PsychologistConnect({
                 <div>
                   <p className="font-semibold text-coral-700">Priority request received 💛</p>
                   <p className="mt-1 text-sm text-ink-soft">
-                    Nadia Prameswari (on-call today) got an <b>anonymous</b> Red alert and will reach out within 2
-                    hours. Your manager & HR are <b>not</b> notified. You can also pick any slot below.
+                    Nadia Prameswari (on-call today) got an <b>anonymous</b> Red alert ({anonCode}) and will reach out within 2
+                    hours. Your manager &amp; HR are <b>not</b> notified. You can also pick any slot below.
                   </p>
                 </div>
               </div>
@@ -85,17 +110,25 @@ export default function PsychologistConnect({
 
         {/* Cards */}
         <div className="mt-12 grid gap-4 md:grid-cols-3">
-          {PSYCHOLOGISTS.map((p, i) => (
-            <Reveal key={p.id} delay={i * 0.08}>
-              <PsychologistCard
-                p={p}
-                state={bookings[p.id] ?? { status: "idle" }}
-                onBook={() => book(p)}
-                onCancel={() => cancel(p.id)}
-                priority={priorityRequested && i === 0}
-              />
-            </Reveal>
-          ))}
+          {PSYCHOLOGISTS.map((p, i) => {
+            const alreadyBookedInDb = savedBookings.find((b) => b.psychologistId === p.id);
+            const effectiveState: BookingState =
+              bookings[p.id] ??
+              (alreadyBookedInDb
+                ? { status: "booked", anonId: alreadyBookedInDb.anonCode }
+                : { status: "idle" });
+            return (
+              <Reveal key={p.id} delay={i * 0.08}>
+                <PsychologistCard
+                  p={p}
+                  state={effectiveState}
+                  onBook={() => book(p)}
+                  onCancel={() => cancel(p.id)}
+                  priority={priorityRequested && i === 0}
+                />
+              </Reveal>
+            );
+          })}
         </div>
 
         {/* Pre-counseling summary explainer */}
@@ -131,7 +164,7 @@ export default function PsychologistConnect({
           </Reveal>
 
           <Reveal delay={0.08} className="lg:col-span-3">
-            <SummaryMockup level={previewLevel} todayCheckIn={todayCheckIn} />
+            <SummaryMockup level={previewLevel} todayCheckIn={todayCheckIn} anonCode={anonCode} />
           </Reveal>
         </div>
       </div>
@@ -250,7 +283,15 @@ function PsychologistCard({
   );
 }
 
-function SummaryMockup({ level, todayCheckIn }: { level: Level; todayCheckIn: VibeResult | null }) {
+function SummaryMockup({
+  level,
+  todayCheckIn,
+  anonCode,
+}: {
+  level: Level;
+  todayCheckIn: VibeResult | null;
+  anonCode: string;
+}) {
   const r = MONTHLY[level];
   const s = LEVEL_STYLES[level];
 
@@ -268,7 +309,7 @@ function SummaryMockup({ level, todayCheckIn }: { level: Level; todayCheckIn: Vi
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-ink-mute">Pre-Counseling Summary</p>
             <p className="mt-1 flex items-center gap-2 text-lg font-semibold text-ink">
-              <Fingerprint className="size-5 text-ink-mute" /> Client Anon-#4821
+              <Fingerprint className="size-5 text-ink-mute" /> Client {anonCode}
             </p>
           </div>
           <AnimatePresence mode="wait">
