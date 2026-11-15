@@ -7,9 +7,12 @@ import {
   BatteryWarning,
   CalendarCheck,
   Check,
+  Database,
+  LoaderCircle,
   Lock,
   RotateCcw,
   Send,
+  ShieldAlert,
   Sparkles,
   Timer,
   Zap,
@@ -27,6 +30,7 @@ import {
   type VibeResult,
 } from "./data";
 import { LEVEL_STYLES, Reveal, SectionHeader, StatusDot, cn } from "./ui";
+import type { PersonalVibeEntry } from "./workspaceTypes";
 
 const MOOD_SELECTED: Record<Level, string> = {
   green: "bg-sage-100 text-sage-700 ring-2 ring-sage-400 shadow-soft",
@@ -40,16 +44,33 @@ export default function VibeCheck({
   onSubmit,
   onPriorityBook,
   priorityRequested,
+  psychConsent = true,
+  anonCode = "Anon-#4821",
+  personalVibeLogs = [],
+  onSaveToDb,
+  onGrantPsychConsent,
 }: {
   onSubmit: (result: VibeResult) => void;
   onPriorityBook: () => void;
   priorityRequested: boolean;
+  psychConsent?: boolean;
+  anonCode?: string;
+  personalVibeLogs?: PersonalVibeEntry[];
+  onSaveToDb?: (payload: {
+    moodId: MoodId;
+    workloadScore: number;
+    tags: string[];
+    reflection: string;
+  }) => Promise<void>;
+  onGrantPsychConsent?: () => Promise<void>;
 }) {
   const [mood, setMood] = useState<MoodId>("okay");
   const [load, setLoad] = useState(4);
   const [tags, setTags] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [enablingConsent, setEnablingConsent] = useState(false);
 
   const result = useMemo(() => computeVibe(mood, load, tags), [mood, load, tags]);
   const sliderId = useId();
@@ -83,9 +104,33 @@ export default function VibeCheck({
     setSubmitted(false);
   };
 
-  const submit = () => {
-    setSubmitted(true);
-    onSubmit(result);
+  const submit = async () => {
+    if (!psychConsent) return;
+    setSaving(true);
+    try {
+      if (onSaveToDb) {
+        await onSaveToDb({
+          moodId: mood,
+          workloadScore: load,
+          tags,
+          reflection: note,
+        });
+      }
+      setSubmitted(true);
+      onSubmit(result);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEnablePsych = async () => {
+    if (!onGrantPsychConsent) return;
+    setEnablingConsent(true);
+    try {
+      await onGrantPsychConsent();
+    } finally {
+      setEnablingConsent(false);
+    }
   };
 
   const loadPct = ((load - 1) / 9) * 100;
@@ -95,12 +140,44 @@ export default function VibeCheck({
     <section id="vibe-check" className="scroll-mt-28 px-4 py-20 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <SectionHeader
-          eyebrow="Interactive demo"
+          eyebrow="Lapisan Data 2 · Pemantauan Psikologis Terenkripsi"
           icon={<Zap className="size-3.5" />}
           title="The 10-Second"
           accent="Daily Vibe Check."
-          description="Go on, try it. Your status updates live as you tap. (Demo mode — nothing leaves your browser.)"
+          description="Catat kondisi mental & beban kerjamu hari ini. Tersimpan di Lapisan Data 2 menggunakan token pseudonim HMAC-SHA256 dan enkripsi AES-256-GCM (HR tidak dapat mengaksesnya)."
         />
+
+        {/* Banner when Explicit Psychological Consent is NOT yet given (Pasal 5 ayat 2) */}
+        {!psychConsent && (
+          <Reveal className="mt-8 rounded-2xl border-2 border-honey-400 bg-honey-50 p-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-honey-500 text-white">
+                  <ShieldAlert className="size-6" />
+                </span>
+                <div>
+                  <p className="text-base font-semibold text-ink">
+                    Fitur Psikologis Memerlukan Persetujuan Eksplisit Terpisah (Pasal 5 Ayat 2)
+                  </p>
+                  <p className="mt-1 max-w-2xl text-xs leading-relaxed text-ink-soft">
+                    Saat ini akun Anda hanya mengaktifkan <b>Persetujuan Umum</b> (untuk kehadiran/absensi). Sesuai UU No. 27 Tahun 2022 (UU PDP), pengumpulan Data Psikologis pada Daily Vibe Check baru dapat dijalankan setelah Anda memberikan <b>Persetujuan Eksplisit Data Psikologis</b>.
+                  </p>
+                </div>
+              </div>
+              {onGrantPsychConsent && (
+                <button
+                  type="button"
+                  disabled={enablingConsent}
+                  onClick={handleEnablePsych}
+                  className="flex items-center gap-2 rounded-2xl bg-ink px-5 py-3 text-xs font-semibold text-cream shadow-lift transition hover:bg-ink/90 disabled:opacity-60"
+                >
+                  {enablingConsent && <LoaderCircle className="size-4 animate-spin" />}
+                  Aktifkan Persetujuan Eksplisit Psikologis
+                </button>
+              )}
+            </div>
+          </Reveal>
+        )}
 
         {/* Presenter shortcuts */}
         <Reveal className="mt-10 flex flex-wrap items-center justify-center gap-2">
@@ -125,9 +202,11 @@ export default function VibeCheck({
         <div className="mt-8 grid items-start gap-5 lg:grid-cols-[1.35fr_1fr]">
           {/* Check-in form */}
           <Reveal className="bento p-6 sm:p-8">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="text-xs font-medium text-ink-mute">Today&apos;s check-in</p>
+                <p className="text-xs font-medium text-ink-mute">
+                  Today&apos;s check-in · Token Pseudonim: <b>{anonCode}</b>
+                </p>
                 <p className="text-lg font-semibold text-ink">Hey, how are you really? 💬</p>
               </div>
               <span className="flex items-center gap-1.5 rounded-full bg-ink/5 px-3 py-1 text-xs font-semibold text-ink-soft">
@@ -251,7 +330,7 @@ export default function VibeCheck({
             {/* 4. Reflection */}
             <div className="mt-9">
               <label htmlFor={noteId} className="flex items-center gap-2 text-sm font-semibold text-ink">
-                <StepNum n={4} /> Short reflection <span className="font-normal text-ink-mute">(optional)</span>
+                <StepNum n={4} /> Short reflection <span className="font-normal text-ink-mute">(optional · AES-256-GCM encrypted)</span>
               </label>
               <div className="relative mt-4">
                 <input
@@ -275,22 +354,30 @@ export default function VibeCheck({
             {/* Submit */}
             <div className="mt-9 flex flex-col-reverse items-stretch justify-between gap-4 border-t border-ink/5 pt-6 sm:flex-row sm:items-center">
               <p className="flex items-center gap-2 text-xs text-ink-mute">
-                <Lock className="size-3.5 text-sage-600" /> Encrypted · HR can&apos;t see this
+                <Lock className="size-3.5 text-sage-600" /> Disimpan di Lapisan 2 ({anonCode}) · HR tidak bisa melihat
               </p>
               <motion.button
                 type="button"
                 onClick={submit}
-                disabled={submitted}
+                disabled={submitted || saving || !psychConsent}
                 whileTap={{ scale: 0.97 }}
                 className={cn(
                   "flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-semibold transition-all",
-                  submitted ? "bg-sage-100 text-sage-700" : "bg-ink text-cream shadow-lift hover:bg-ink/90",
+                  !psychConsent
+                    ? "cursor-not-allowed bg-ink/10 text-ink-mute"
+                    : submitted
+                      ? "bg-sage-100 text-sage-700"
+                      : "bg-ink text-cream shadow-lift hover:bg-ink/90",
                 )}
               >
                 <AnimatePresence mode="wait" initial={false}>
-                  {submitted ? (
+                  {saving ? (
+                    <motion.span key="saving" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
+                      <LoaderCircle className="size-4 animate-spin" /> Mengenkripsi &amp; Menyimpan…
+                    </motion.span>
+                  ) : submitted ? (
                     <motion.span key="done" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2">
-                      <Check className="size-4" strokeWidth={3} /> Logged anonymously
+                      <Check className="size-4" strokeWidth={3} /> Tersimpan di Lapisan 2 ({anonCode})
                     </motion.span>
                   ) : (
                     <motion.span key="send" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2">
@@ -312,6 +399,67 @@ export default function VibeCheck({
             />
           </div>
         </div>
+
+        {/* Personal Encrypted Vibe Logs History (Lapisan 2) */}
+        {psychConsent && personalVibeLogs.length > 0 && (
+          <Reveal className="mt-8 bento p-6 sm:p-7">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-sage-700">
+                  <Database className="size-3.5" /> Riwayat Vibe Check Pribadi Anda (Lapisan 2 · Terenkripsi AES-256-GCM)
+                </p>
+                <h3 className="mt-1 text-lg font-semibold text-ink">
+                  Catatan Kesejahteraan Harian ({personalVibeLogs.length} Entri Tersimpan)
+                </h3>
+              </div>
+              <span className="rounded-full bg-cream-200 px-3 py-1 text-xs font-semibold text-ink-soft">
+                Subjek Token: {anonCode}
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {personalVibeLogs.slice(0, 6).map((entry) => {
+                const st = LEVEL_STYLES[entry.colorLevel];
+                const moodObj = MOODS.find((m) => m.id === entry.moodId);
+                return (
+                  <div
+                    key={entry.id}
+                    className="rounded-2xl border border-ink/8 bg-white p-4 shadow-soft"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-ink">
+                        {entry.entryDate} · Minggu {entry.weekNumber}
+                      </span>
+                      <span className={cn("rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase", st.chip)}>
+                        {entry.capacityScore}% · {st.name}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm font-semibold text-ink">
+                      {moodObj?.emoji} {moodObj?.label} · Load {entry.workloadScore}/10
+                    </p>
+                    {entry.tags.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {entry.tags.map((tg) => (
+                          <span
+                            key={tg}
+                            className="rounded-md bg-cream-200 px-2 py-0.5 text-[10px] font-semibold text-ink-soft"
+                          >
+                            #{tg}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {entry.reflection && (
+                      <p className="mt-2.5 rounded-xl bg-cream p-2.5 text-xs italic text-ink-soft">
+                        &ldquo;{entry.reflection}&rdquo;
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </Reveal>
+        )}
       </div>
     </section>
   );
